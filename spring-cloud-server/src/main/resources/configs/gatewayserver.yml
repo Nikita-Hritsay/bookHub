@@ -1,0 +1,5 @@
+server:
+  port: 8072
+
+build:
+  version: "def gateway: 1.0.0"

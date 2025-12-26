@@ -1,0 +1,93 @@
+package org.users.service.users.service.impl;
+
+import lombok.AllArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.users.service.users.dto.UserDto;
+import org.users.service.users.entity.Role;
+import org.users.service.users.entity.User;
+import org.users.service.users.exception.ResourceNotFoundException;
+import org.users.service.users.exception.UserAlreadyExistsException;
+import org.users.service.users.mapper.UserMapper;
+import org.users.service.users.repository.RoleRepository;
+import org.users.service.users.repository.UserRepository;
+import org.users.service.users.service.IUserService;
+
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+
+@Service
+@AllArgsConstructor
+public class UserServiceImpl implements IUserService {
+
+    private RoleRepository roleRepository;
+
+    private UserRepository userRepository;
+
+    @Override
+    public User createUser(UserDto userDto) {
+        User user = UserMapper.mapToUser(userDto, new User());
+        Optional<User> optionalUser = userRepository.findByMobileNumber(
+                userDto.getMobileNumber());
+        if (optionalUser.isPresent()) {
+            throw new UserAlreadyExistsException(
+                    "User already exists with given mobile number: " + userDto.getMobileNumber());
+        }
+        createNewUserWithDefaultRole(user);
+        return userRepository.save(user);
+    }
+
+    private void createNewUserWithDefaultRole(User user) {
+        Role userRole = roleRepository.findByRoleName("USER")
+                .orElseGet(() -> roleRepository.save(new Role().withRoleName("USER")));
+
+        user.setRoles(Set.of(userRole));
+    }
+
+    @Override
+    public UserDto fetchUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id",
+                        id.toString()));
+
+        return UserMapper.mapToUserDto(user, new UserDto());
+    }
+
+    @Override
+    public boolean updateUser(UserDto userDto) {
+        User user = userRepository.findById(userDto.getId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User", "id", userDto.getId().toString()));
+
+        Optional<User> byMobileNumber = userRepository.findByMobileNumber(
+                userDto.getMobileNumber());
+        if (byMobileNumber.isPresent() && !Objects.equals(user.getId(),
+                byMobileNumber.get().getId())) {
+            throw new UserAlreadyExistsException(
+                    "User already exists with given mobile number: " + userDto.getMobileNumber());
+        }
+
+        user.setFirstName(userDto.getFirstName());
+        user.setLastName(userDto.getLastName());
+        user.setEmail(userDto.getEmail());
+        user.setMobileNumber(userDto.getMobileNumber());
+
+        userRepository.save(user);
+
+        return true;
+    }
+
+    @Override
+    @Transactional
+    public boolean deleteUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("User", "id",
+                                userId.toString())
+                );
+        userRepository.delete(user);
+        return true;
+    }
+
+}

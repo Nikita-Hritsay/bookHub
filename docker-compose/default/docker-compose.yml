@@ -1,0 +1,90 @@
+services:
+  usersdb:
+    image: mysql
+    ports:
+      - 3306:3306
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 10
+      interval: 10s
+      start_period: 10s
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: userdb
+    extends:
+      file: common-config.yml
+      service: network-deploy-service
+
+  config-server:
+    image: "mykyta2/bookhub-config-server:v1"
+    ports:
+      - "8071:8071"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8071/actuator/health/readiness"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      usersdb:
+        condition: service_healthy
+    extends:
+      file: common-config.yml
+      service: microservice-base-config
+
+  eurekaserver:
+    image: "mykyta2/bookhub-eureka-server:v1"
+    ports:
+      - "8070:8070"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8070/actuator/health/readiness" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      config-server:
+        condition: service_healthy
+    extends:
+      file: common-config.yml
+      service: microservice-configserver-config
+    environment:
+      SPRING_APPLICATION_NAME: "eurekaserver"
+
+  users:
+    image: "mykyta2/bookhub-users:v1"
+    ports:
+      - "8083:8083"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8083/actuator/health/readiness" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    extends:
+      file: common-config.yml
+      service: microservice-eureka-config
+    depends_on:
+      eurekaserver:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: "users"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://usersdb:3306/userdb"
+
+  gateway-server:
+    image: "mykyta2/bookhub-gateway-server:v1"
+    ports:
+      - "8072:8072"
+    depends_on:
+      users:
+        condition: service_started
+    environment:
+      SPRING_APPLICATION_NAME: "gatewayserver"
+    extends:
+      file: common-config.yml
+      service: microservice-eureka-config
+
+networks:
+  mykyta2:
+    driver: "bridge"
