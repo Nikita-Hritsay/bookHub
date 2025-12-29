@@ -1,0 +1,354 @@
+############################################
+# META data
+############################################
+openapi: 3.0.3
+
+info:
+  title: Library Service API
+  description: API for managing books, authors and genres
+  version: 1.0.0
+
+
+############################################
+# Info about server
+############################################
+servers:
+  - url: http://localhost:8082
+    description: Local environment
+
+
+############################################
+# Tags are logical groups, NOT controllers
+############################################
+tags:
+  - name: Books
+    description: Operations related to books
+  - name: Authors
+    description: Operations related to authors
+  - name: Genres
+    description: Operations related to genres
+
+
+############################################
+# Endpoints description
+############################################
+paths:
+
+  ##########################################
+  # BOOKS
+  ##########################################
+  /books:
+    post:
+      tags:
+        - Books
+      summary: Create new book
+      operationId: createBook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookCreateRequest'
+      responses:
+        '201':
+          description: Book successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags:
+        - Books
+      summary: Get all books
+      operationId: getAllBooks
+      responses:
+        '200':
+          description: List of books
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BookResponse'
+
+  /books/{id}:
+    get:
+      tags:
+        - Books
+      summary: Get book by id
+      operationId: getBookById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Book identifier
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Book found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookResponse'
+        '404':
+          description: Book not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Books
+      summary: Archive book (soft delete)
+      operationId: archiveBook
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Book archived
+        '404':
+          description: Book not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+
+  ##########################################
+  # AUTHORS
+  ##########################################
+  /authors:
+    post:
+      tags:
+        - Authors
+      summary: Create author
+      operationId: createAuthor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthorCreateRequest'
+      responses:
+        '201':
+          description: Author created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorResponse'
+
+    get:
+      tags:
+        - Authors
+      summary: Get all authors
+      operationId: getAllAuthors
+      responses:
+        '200':
+          description: List of authors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuthorResponse'
+
+
+  ##########################################
+  # GENRES
+  ##########################################
+  /genres:
+    post:
+      tags:
+        - Genres
+      summary: Create genre
+      operationId: createGenre
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenreCreateRequest'
+      responses:
+        '201':
+          description: Genre created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenreResponse'
+
+    get:
+      tags:
+        - Genres
+      summary: Get all genres
+      operationId: getAllGenres
+      responses:
+        '200':
+          description: List of genres
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GenreResponse'
+
+
+############################################
+# DTOs declaration (API models)
+############################################
+components:
+  schemas:
+
+    ########################################
+    # BOOK DTOs
+    ########################################
+    BookCreateRequest:
+      type: object
+      required:
+        - title
+        - isbn
+        - publishedDate
+        - language
+        - authorId
+      properties:
+        title:
+          type: string
+          example: Clean Code
+        description:
+          type: string
+          example: A handbook of agile software craftsmanship
+        isbn:
+          type: string
+          example: 9780132350884
+        publishedDate:
+          type: string
+          format: date-time
+          example: 2008-08-01T00:00:00Z
+        language:
+          type: string
+          enum: [ENGLISH, SPANISH, FRENCH, GERMAN, CHINESE]
+        authorId:
+          type: integer
+          format: int64
+
+    BookResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        description:
+          type: string
+        isbn:
+          type: string
+        publishedDate:
+          type: string
+          format: date-time
+        language:
+          type: string
+        status:
+          type: string
+        author:
+          $ref: '#/components/schemas/AuthorResponse'
+
+
+    ########################################
+    # AUTHOR DTOs
+    ########################################
+    AuthorCreateRequest:
+      type: object
+      required:
+        - firstName
+        - lastName
+      properties:
+        firstName:
+          type: string
+          example: Robert
+        lastName:
+          type: string
+          example: Martin
+        country:
+          type: string
+          example: USA
+        birthDate:
+          type: string
+          format: date-time
+
+    AuthorResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        firstName:
+          type: string
+        lastName:
+          type: string
+        country:
+          type: string
+        birthDate:
+          type: string
+          format: date-time
+        status:
+          type: string
+
+
+    ########################################
+    # GENRE DTOs
+    ########################################
+    GenreCreateRequest:
+      type: object
+      required:
+        - name
+        - description
+      properties:
+        name:
+          type: string
+          example: Programming
+        description:
+          type: string
+          example: Books related to software development
+
+    GenreResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+
+
+    ########################################
+    # COMMON ERROR RESPONSE
+    ########################################
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          example: BOOK_NOT_FOUND
+        message:
+          type: string
+          example: Book with id 10 not found
+        timestamp:
+          type: string
+          format: date-time
